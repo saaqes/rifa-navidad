@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Bauble, DecorRow, Lights, Snowfall } from "@/components/Decor";
+import { CornerDecor, DecorRow, Lights, Snowfall } from "@/components/Decor";
 
 export default function LoginPage() {
   const [error, setError] = useState("");
@@ -32,8 +32,7 @@ export default function LoginPage() {
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
       <Snowfall />
       <Lights />
-      <Bauble className="left-[12%] top-10" size={48} />
-      <Bauble className="right-[12%] top-10" color="#d4a437" size={48} delay={0.9} />
+      <CornerDecor bottomOffset="0px" />
       <div className="relative z-10 w-full max-w-sm">
         <form onSubmit={onSubmit} className="panel fade-up space-y-4 p-6">
           <div className="text-center">

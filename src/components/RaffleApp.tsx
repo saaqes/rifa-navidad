@@ -2,8 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatMoney, pad } from "@/lib/format";
 import type { RaffleConfig } from "@/lib/config";
-import { Logo } from "./Logo";
-import { Bauble, Confetti, DecorRow, Lights, Sleigh, Snowfall } from "./Decor";
+import { Bauble, Bow, Confetti, CornerDecor, DecorRow, Holly, Lights, Ribbon, Sleigh, Snowfall, Sponsor } from "./Decor";
 
 type Status = "available" | "reserved" | "sold";
 type Result = {
@@ -123,48 +122,67 @@ export function RaffleApp({ config }: { config: RaffleConfig }) {
   const reset = () => { setStep("grid"); setResult(null); setForm({ name: "", phone: "", accepted: false }); setNotice(""); };
 
   return (
-    <div className="relative min-h-screen overflow-x-clip pb-44 sm:pb-32">
+    <div className="relative min-h-screen overflow-x-clip pb-44 sm:pb-32 [--bar-h:11rem] sm:[--bar-h:8rem]">
       <Snowfall />
       <Lights />
+      <CornerDecor bottomOffset="var(--bar-h)" />
 
-      {/* ---------- Encabezado / héroe ---------- */}
-      <header className="relative overflow-hidden px-4 pb-12 pt-16 text-center text-cream">
+      {/* ---------- Encabezado / héroe (como la boleta) ---------- */}
+      <header className="relative px-3 pb-10 pt-14 text-center text-cream sm:px-4">
         <Sleigh />
-        <Bauble className="left-[3%] top-10 hidden sm:block" color="#b3202a" size={46} />
-        <Bauble className="left-[9%] top-8 hidden md:block" color="#d4a437" size={36} delay={0.8} />
-        <Bauble className="right-[3%] top-10 hidden sm:block" color="#d4a437" size={46} delay={0.4} />
-        <Bauble className="right-[9%] top-8 hidden md:block" color="#b3202a" size={36} delay={1.2} />
+        <Bauble className="left-[26%] top-9 hidden md:block" color="#d4a437" size={34} delay={0.8} />
+        <Bauble className="right-[26%] top-9 hidden md:block" color="#b3202a" size={34} delay={1.2} />
 
-        <div className="relative z-10 mx-auto flex max-w-5xl items-center justify-between gap-3">
-          <Logo />
-          <a href="#participar" className="rounded-full bg-gold px-4 py-2 text-sm font-bold text-pine-dark shadow hover:brightness-110">Elegir números</a>
+        <div className="relative z-10 mx-auto max-w-3xl fade-up">
+          {/* Placa «Valor de la boleta» */}
+          <div className="relative mx-auto inline-block rounded-[1.4rem] border-4 border-[#f2c14e] bg-gradient-to-b from-[#d8323d] to-[#9c1a22] px-8 py-2 shadow-xl">
+            <span aria-hidden className="absolute -left-3 top-1/2 -translate-y-1/2 text-xl text-gold">★</span>
+            <span aria-hidden className="absolute -right-3 top-1/2 -translate-y-1/2 text-xl text-gold">★</span>
+            <div className="font-title text-sm uppercase tracking-wide text-white sm:text-lg">Valor de la boleta</div>
+            <div className="font-title text-4xl leading-none text-[#ffd23f] drop-shadow-[0_3px_0_#6f1017] sm:text-6xl">{money(price).replace("$ ", "$")}</div>
+          </div>
+
+          {/* Título + cinta NAVIDEÑA */}
+          <div className="relative mt-2">
+            <h1 className="sr-only">Gran Rifa Navideña</h1>
+            <div aria-hidden className="title-3d mx-auto whitespace-nowrap text-[clamp(2.3rem,12.2vw,7.4rem)]" data-text="GRAN RIFA"><span>GRAN RIFA</span></div>
+            <Ribbon className="-mt-1 w-[96%] max-w-[34rem]">
+              <div aria-hidden className="title-white py-1 text-[clamp(2.2rem,11.5vw,5.2rem)] leading-none">NAVIDEÑA</div>
+            </Ribbon>
+            <div aria-hidden className="floaty -mt-3 text-3xl text-gold drop-shadow">⭐</div>
+          </div>
+
+          {/* Cinta de premios */}
+          <Ribbon className="mt-1 w-[98%] max-w-[36rem]">
+            <div className="px-2 py-1.5">
+              <div className="font-title text-[clamp(2.1rem,10.5vw,4.4rem)] leading-none text-[#ffd23f] drop-shadow-[0_3px_0_#6f1017]">{money(config.totalPrizes).replace("$ ", "$")}</div>
+              <div className="font-title text-lg tracking-wide text-white sm:text-2xl">EN PREMIOS</div>
+            </div>
+          </Ribbon>
         </div>
 
-        <div className="relative z-10 mx-auto mt-6 max-w-3xl fade-up">
-          <div className="inline-block rounded-2xl border-2 border-gold bg-berry px-5 py-2 shadow-lg">
-            <div className="text-xs font-bold uppercase tracking-widest text-gold-light">Valor de la boleta</div>
-            <div className="font-display text-3xl font-black text-gold sm:text-4xl">{money(price)}</div>
-          </div>
-          <h1 className="shimmer-text mt-4 font-display text-5xl font-black leading-[1.05] sm:text-7xl">Gran Rifa<br />Navideña</h1>
-          <div className="relative mx-auto mt-5 max-w-xl rounded-xl border-y-4 border-gold bg-berry px-4 py-3 shadow-xl">
-            <div className="font-display text-4xl font-black text-gold sm:text-6xl">{money(config.totalPrizes)}</div>
-            <div className="text-lg font-extrabold tracking-wide text-white">EN PREMIOS</div>
-          </div>
-        </div>
-
-        <div className="relative z-10 mx-auto mt-8 grid max-w-3xl gap-5 sm:grid-cols-2" aria-label="Premios">
+        {/* Bolas de premio */}
+        <div className="relative z-10 mx-auto mt-10 grid max-w-3xl gap-9 sm:grid-cols-2 sm:gap-6" aria-label="Premios">
           {config.prizes.map((p, i) => (
-            <div key={p.title} className="fade-up rounded-[2rem] border-4 border-gold bg-[radial-gradient(circle_at_30%_25%,#fffbe8,#f5d77c_70%,#d9a93a)] p-5 text-pine-dark shadow-2xl" style={{ animationDelay: `${0.15 * (i + 1)}s` }}>
-              <div className={`mx-auto inline-block rounded-full px-5 py-1 text-sm font-extrabold uppercase tracking-wider text-white ${i === 0 ? "bg-pine" : "bg-berry"}`}>⭐ {p.title} ⭐</div>
-              <div className="mt-2 font-display text-4xl font-black text-berry sm:text-5xl">{money(p.amount)}</div>
-              <div className="mt-1 text-sm font-semibold">🎄 Juega el {p.playDate}</div>
+            <div key={p.title} className="prize-ball fade-up mx-auto flex aspect-square w-full max-w-[19rem] flex-col items-center justify-center px-4 pb-6 pt-8 text-pine-dark" style={{ animationDelay: `${0.15 * (i + 1)}s` }}>
+              <span aria-hidden className="prize-cap" />
+              <Bow className="absolute -top-9 left-1/2 w-24 -translate-x-1/2" />
+              <div className={`absolute left-1/2 top-[13%] w-[92%] -translate-x-1/2 rounded-md px-2 py-1 font-title text-sm uppercase tracking-wide text-white shadow-md sm:text-base ${i === 0 ? "bg-gradient-to-b from-[#1f7a46] to-[#0f4d2c]" : "bg-gradient-to-b from-[#c4252f] to-[#8c1820]"}`} style={{ clipPath: "polygon(0 0,100% 0,96% 50%,100% 100%,0 100%,4% 50%)" }}>
+                <span className="text-gold">★</span> {p.title} <span className="text-gold">★</span>
+              </div>
+              <div className="mt-8 font-title text-[2.2rem] leading-none text-[#c4161f] drop-shadow-[0_2px_0_#fff3] sm:text-4xl">{money(p.amount).replace("$ ", "$")}</div>
+              <div aria-hidden className="mx-auto my-2 flex items-center justify-center gap-2 text-sm text-pine"><span className="h-px w-10 bg-pine/40" />🎄<span className="h-px w-10 bg-pine/40" /></div>
+              <div className="text-sm font-semibold leading-snug">Juega el {p.playDate}</div>
+              <Holly className="absolute -bottom-3 left-1/2 w-40 -translate-x-1/2" />
+              <span aria-hidden className="absolute left-4 top-1/2 text-xl text-gold/60">❄</span>
+              <span aria-hidden className="absolute right-4 top-1/2 text-xl text-gold/60">❄</span>
             </div>
           ))}
         </div>
 
-        <p className="relative z-10 mx-auto mt-6 flex max-w-xl items-center justify-center gap-3 rounded-full border-2 border-gold bg-cream px-4 py-2 text-sm font-bold text-pine shadow-lg sm:text-base">
-          <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-berry text-lg font-black text-berry">✚</span>
-          {config.lotteryNote}
+        <p className="relative z-10 mx-auto mt-10 flex max-w-xl items-center justify-center gap-3 rounded-2xl border-[3px] border-[#e0b040] bg-cream px-4 py-2.5 text-sm font-bold leading-snug text-pine shadow-xl sm:text-base">
+          <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-berry bg-white text-xl font-black text-berry">✚</span>
+          <span>{config.lotteryNote}</span>
         </p>
 
         <div className="relative z-10 mx-auto mt-6 grid max-w-md grid-cols-3 gap-2 text-sm text-cream">
@@ -247,8 +265,9 @@ export function RaffleApp({ config }: { config: RaffleConfig }) {
         )}
       </main>
 
-      <footer className="relative z-10 mt-12 px-4 py-8 text-center text-sm text-cream/85">
+      <footer className="relative z-10 mt-12 px-4 pb-48 pt-8 text-center text-sm text-cream/85 sm:pb-24">
         <DecorRow />
+        <div className="mt-6 flex justify-center"><Sponsor /></div>
         <p className="mt-4 font-semibold text-cream">Constructora Painting 2 S.A.S.</p>
         {config.legalInfo && <p className="mt-1">{config.legalInfo}</p>}
         <p className="mt-1 text-gold">¡Felices fiestas! 🎄</p>
@@ -258,13 +277,14 @@ export function RaffleApp({ config }: { config: RaffleConfig }) {
       {/* ---------- Barra de selección ---------- */}
       {step === "grid" && (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t-4 border-gold bg-pine-dark/95 p-3 text-cream shadow-[0_-8px_24px_rgba(0,0,0,.4)] backdrop-blur">
-          <div className="mx-auto flex max-w-5xl flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <div className="mx-auto flex max-w-5xl flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
             <div className="min-w-0 flex-1" aria-live="polite">
               <p className="text-sm font-bold text-gold">{selected.length} {selected.length === 1 ? "número" : "números"} · {money(total)}</p>
               <p className="truncate text-sm text-cream/80">{selected.length ? selected.map(pad).join(", ") : "Aún no has elegido números"}</p>
             </div>
             {selected.length > 0 && <button type="button" onClick={() => setSelected([])} className="self-start text-sm text-gold-light underline sm:self-auto">Limpiar</button>}
             <button type="button" disabled={!selected.length} onClick={() => setStep("form")} className={`btn-primary w-full sm:w-auto ${selected.length ? "glow" : ""}`}>Continuar con la reserva</button>
+            <div className="flex justify-center border-t border-gold/30 pt-2 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0"><Sponsor compact /></div>
           </div>
         </div>
       )}

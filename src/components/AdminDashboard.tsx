@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { formatMoney, pad } from "@/lib/format";
-import { Bauble, Lights, Snowfall } from "./Decor";
+import { CornerDecor, Lights, Snowfall } from "./Decor";
 
 type NumRow = { number: number; status: "available" | "reserved" | "sold"; code: string | null; name: string | null };
 type Res = {
@@ -68,8 +68,7 @@ export function AdminDashboard({ username, currency }: { username: string; curre
     <div className="relative min-h-screen overflow-x-clip pb-12">
       <Snowfall count={70} />
       <Lights />
-      <Bauble className="right-[1%] top-10 hidden 2xl:block" size={40} />
-      <Bauble className="left-[1%] top-10 hidden 2xl:block" color="#d4a437" size={40} delay={0.7} />
+      <CornerDecor gifts={false} />
 
       <div className="relative z-10 mx-auto max-w-6xl space-y-5 px-4 pt-16">
         <header className="flex flex-wrap items-center justify-between gap-2 text-cream">

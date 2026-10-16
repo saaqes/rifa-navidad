@@ -8,7 +8,8 @@
   --color-gold: #d4a437;
   --color-gold-light: #ffe9a0;
   --color-cream: #fbf6ea;
-  --font-display: "Georgia", "Times New Roman", serif;
+  --font-display: "Mountains of Christmas", "Georgia", serif;
+  --font-title: "Alfa Slab One", "Rockwell", "Georgia", serif;
 }
 
 html { scroll-behavior: smooth; }
@@ -97,3 +98,25 @@ body {
   .fade-up, .swing, .floaty, .sleigh, .shimmer-text, .glow, .bulb, .confetti, .ball-selected { animation: none !important; }
   .sleigh { display: none; }
 }
+
+/* ---------- Título tipo boleta ---------- */
+.title-3d { position: relative; font-family: var(--font-title); letter-spacing: .01em; line-height: 1; text-transform: uppercase; }
+.title-3d > span { display: block; background: linear-gradient(180deg, #fff6b8 0%, #ffd23f 38%, #f0a81c 62%, #c9780a 100%); -webkit-background-clip: text; background-clip: text; color: transparent; position: relative; z-index: 1; }
+.title-3d::before { content: attr(data-text); position: absolute; inset: 0; z-index: 0; color: #8c1820; -webkit-text-stroke: 0.22em #8c1820; paint-order: stroke fill; text-shadow: 0 .09em 0 #5d0e14, 0 .16em .18em rgba(0, 0, 0, .55); }
+.title-3d::after { content: attr(data-text); position: absolute; inset: 0; z-index: 0; color: transparent; -webkit-text-stroke: 0.1em #fff3b0; opacity: .85; }
+.title-white { font-family: var(--font-title); text-transform: uppercase; color: #fff; text-shadow: 0 .06em 0 #8c1820, 0 .12em .12em rgba(0, 0, 0, .5); letter-spacing: .02em; }
+
+/* ---------- Cintas con extremos doblados ---------- */
+.ribbon { position: relative; display: inline-block; padding: 0 30px; }
+.ribbon-body { position: relative; z-index: 2; border-top: 3px solid #f2c14e; border-bottom: 3px solid #f2c14e; box-shadow: 0 8px 18px rgba(0, 0, 0, .35); }
+.ribbon-tail { position: absolute; top: 14%; width: 52px; height: 100%; z-index: 1; background: linear-gradient(180deg, #b11f29, #7d1219); border-top: 3px solid #d9a93a; border-bottom: 3px solid #d9a93a; }
+.ribbon-tail-l { left: 0; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 24% 50%); }
+.ribbon-tail-r { right: 0; clip-path: polygon(0 0, 100% 0, 76% 50%, 100% 100%, 0 100%); }
+
+/* ---------- Bolas de premio ---------- */
+.prize-ball { position: relative; border-radius: 9999px; border: 5px solid #e0b040; background: radial-gradient(circle at 32% 24%, #fffdf0 0, #f8e08e 48%, #e2b445 100%); box-shadow: inset 0 0 0 3px rgba(255, 255, 255, .55), 0 14px 28px rgba(0, 0, 0, .45); }
+.prize-cap { position: absolute; left: 50%; top: -14px; width: 26px; height: 16px; margin-left: -13px; border-radius: 4px 4px 2px 2px; background: linear-gradient(#f6d77a, #b98a1e); }
+.twk { animation: twinkle 1.8s ease-in-out infinite; }
+.font-xmas { font-family: var(--font-display); }
+.font-title { font-family: var(--font-title); }
+@media (prefers-reduced-motion: reduce) { .twk { animation: none !important; } }
