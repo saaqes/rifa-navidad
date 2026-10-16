@@ -11,8 +11,9 @@ Aplicación web para gestionar la rifa de 100 números (00–99): selección pú
 - El comprador elige números y deja **nombre completo y teléfono**; recibe un código `RN-XXXXXX`. No hay WhatsApp del lado del comprador.
 - Reserva atómica: bloqueo ordenado de filas + `CHECK` + índice único parcial; dos solicitudes no pueden tomar el mismo número.
 - Reservas temporales con expiración configurable (`RESERVATION_TTL_MINUTES`).
-- **Flujo del administrador:** la reserva aparece en `/admin` → **Confirmar** (el pago pasa a pagado y los números a vendidos) → aparece **«Escribir a este número»**, un enlace `wa.me` al teléfono del comprador con un mensaje que incluye el enlace de su boleta.
-- **Boleta con número:** `/boleta/<código>/<número>` muestra la boleta oficial (`public/brand/boleta.jpg`) con el número en la esquina superior derecha. Solo existe para números de reservas pagadas. La imagen se genera en `/boleta/<código>/<número>/imagen` (JPEG ligero) y el enlace muestra vista previa en WhatsApp.
+- **Flujo del administrador:** la reserva aparece en `/admin` → **Confirmar** (el pago pasa a pagado y los números a vendidos) → aparece **«Escribir a este número»** por cada boleta: abre el chat de WhatsApp con el comprador con el mensaje escrito y deja la imagen de la boleta copiada para pegarla (Ctrl+V). En celulares también hay **«Compartir imagen + texto»**; además hay «Copiar mensaje» y «Descargar».
+- **Boleta con número:** la boleta oficial (`public/brand/boleta.jpg`) con el número del comprador grande en la esquina superior derecha, generada en `/boleta/<código>/<número>/imagen`. Solo existe para números de reservas pagadas.
+- **Eliminar canceladas:** en el panel se puede eliminar una reserva cancelada/vencida o todas a la vez («Eliminar canceladas»). Las activas y pagadas no se pueden eliminar. El historial conserva el registro.
 - Panel `/admin` con usuario y contraseña: búsqueda, confirmar pago, cancelar (motivo obligatorio si ya estaba pagada), liberar vencidas, totales, ventas confirmadas e historial.
 - Seguridad: sesión firmada (HMAC, cookie HttpOnly/SameSite=Strict), contraseña con scrypt, límite de intentos, verificación de origen y autorización en **cada** ruta `/api/admin/*`.
 
@@ -57,7 +58,7 @@ Obligatorias: `DATABASE_URL`, `DATABASE_SSL`, `ADMIN_PASSWORD_HASH`, `SESSION_SE
 Pendiente: el logo de `public/brand/logo.png` se recortó de la boleta (baja resolución); reemplázalo por el archivo original cuando lo tengas.
 
 ## Limitaciones conocidas
-- WhatsApp (`wa.me`) no permite adjuntar archivos desde un enlace: el mensaje lleva el **enlace** de la boleta, que WhatsApp muestra como imagen de vista previa y se puede descargar.
+- WhatsApp (`wa.me`) no permite adjuntar archivos desde un enlace. Por eso la imagen se copia al portapapeles (se pega con Ctrl+V) o se comparte desde el celular. El envío 100 % automático con imagen requiere la API de WhatsApp Business (Meta), no incluida.
 - La confirmación de pago es manual (administrador); no hay pasarela de pago integrada.
 - Una reserva vencida no puede confirmarse; si llega un pago tardío, el administrador debe gestionar una nueva reserva.
 - Las pruebas usan PostgreSQL local; no se han ejecutado contra Neon/Supabase reales.

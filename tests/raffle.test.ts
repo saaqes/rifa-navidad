@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { getPool, query } from "@/lib/db";
 import { resetDb, setupEnv } from "./helpers";
 import {
-  adminOverview, cancelReservation, findConfirmedTicket, confirmPayment, createReservation, listPublicNumbers, releaseExpired, searchReservations,
+  adminOverview, cancelReservation, deleteReservations, listAudit, findConfirmedTicket, confirmPayment, createReservation, listPublicNumbers, releaseExpired, searchReservations,
 } from "@/lib/raffle";
 
 const person = (i = 1) => ({ name: `Persona Prueba ${"ABCDEFGHIJKLMNOPQRSTUVWXYZ"[i % 26]}`, phone: `30000000${String(i).padStart(2, "0")}` });
@@ -149,5 +149,40 @@ describe("transiciones de estado", () => {
     expect(await searchReservations("persona prueba")).toHaveLength(1);
     expect(await searchReservations("3000000007")).toHaveLength(1);
     expect(await searchReservations("zzz")).toHaveLength(0);
+  });
+});
+
+describe("eliminar reservas canceladas", () => {
+  it("elimina canceladas y vencidas, conserva activas y pagadas y deja rastro en el historial", async () => {
+    const a = await createReservation({ ...person(1), numbers: [1] }); // se cancelará
+    const b = await createReservation({ ...person(2), numbers: [2] }); // pagada
+    const c = await createReservation({ ...person(3), numbers: [3] }); // activa
+    const d = await createReservation({ ...person(4), numbers: [4] }); // vencerá
+    await confirmPayment(b.id, "admin@test");
+    await cancelReservation(a.id, "admin@test");
+    await query("UPDATE reservations SET expires_at = now() - interval '1 minute' WHERE id = $1", [d.id]);
+    await releaseExpired("admin@test");
+
+    expect(await deleteReservations("admin@test")).toEqual({ deleted: 2 });
+    const left = (await searchReservations("")).map((r) => r.code).sort();
+    expect(left).toEqual([b.code, c.code].sort());
+    // participantes sin reservas se eliminan; los que tienen reservas se conservan
+    const { rows } = await query("SELECT count(*)::int AS n FROM participants");
+    expect(rows[0].n).toBe(2);
+    // el historial conserva el código aunque la reserva ya no exista
+    const hist = await listAudit();
+    expect(hist.some((h) => h.code === a.code && h.action === "reservation.cancelled")).toBe(true);
+    expect(hist.some((h) => h.action === "reservations.deleted")).toBe(true);
+    // los números vuelven a poder comprarse
+    await createReservation({ ...person(9), numbers: [1, 4] });
+  });
+
+  it("no permite eliminar reservas activas ni pagadas", async () => {
+    const a = await createReservation({ ...person(1), numbers: [1] });
+    const b = await createReservation({ ...person(2), numbers: [2] });
+    await confirmPayment(b.id, "admin@test");
+    await expect(deleteReservations("admin@test", [a.id])).rejects.toMatchObject({ status: 409 });
+    await expect(deleteReservations("admin@test", [b.id])).rejects.toMatchObject({ status: 409 });
+    expect(await searchReservations("")).toHaveLength(2);
   });
 });

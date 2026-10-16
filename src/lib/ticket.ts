@@ -9,7 +9,7 @@ const HEIGHT = 1536;
 function numberPath(number: number, cx: number, cy: number, height: number): string {
   const digits = String(number).padStart(2, "0").split("");
   const scale = height / 1000 / 0.75; // los dígitos miden ~0.73 em de alto
-  const gap = 14;
+  const gap = 18;
   const widths = digits.map((c) => (DIGITS[c].x2 - DIGITS[c].x1) * scale);
   const total = widths.reduce((a, b) => a + b, 0) + gap * (digits.length - 1);
   let x = cx - total / 2;
@@ -28,7 +28,7 @@ function numberPath(number: number, cx: number, cy: number, height: number): str
 
 /** Insignia con el número en la esquina superior derecha de la boleta. */
 function badgeSvg(number: number): string {
-  const cx = 914;
+  const cx = 890;
   const cy = 140;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}">
   <defs>
@@ -37,12 +37,12 @@ function badgeSvg(number: number): string {
     <filter id="s" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity=".55"/></filter>
   </defs>
   <g filter="url(#s)">
-    <circle cx="${cx}" cy="${cy}" r="102" fill="url(#r)"/>
-    <circle cx="${cx}" cy="${cy}" r="88" fill="url(#g)"/>
-    <circle cx="${cx}" cy="${cy}" r="80" fill="none" stroke="#ffe9a0" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round"/>
+    <circle cx="${cx}" cy="${cy}" r="128" fill="url(#r)"/>
+    <circle cx="${cx}" cy="${cy}" r="110" fill="url(#g)"/>
+    <circle cx="${cx}" cy="${cy}" r="100" fill="none" stroke="#ffe9a0" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round"/>
   </g>
-  <g fill="#000" opacity=".35" transform="translate(3 5)">${numberPath(number, cx, cy, 90)}</g>
-  <g fill="#ffffff">${numberPath(number, cx, cy, 90)}</g>
+  <g fill="#000" opacity=".35" transform="translate(3 5)">${numberPath(number, cx, cy, 118)}</g>
+  <g fill="#ffffff">${numberPath(number, cx, cy, 118)}</g>
 </svg>`;
 }
 

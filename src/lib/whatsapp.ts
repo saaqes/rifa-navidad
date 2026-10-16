@@ -8,28 +8,20 @@ export function toWhatsappPhone(phone: string, countryCode = "57"): string | nul
 }
 
 /** Mensaje que el administrador envía al comprador cuando su pago queda confirmado. */
-export function buildConfirmationMessage(r: {
-  name: string;
-  code: string;
-  numbers: number[];
-  origin: string;
-  lotteryNote?: string;
-}): string {
-  const lines = [
-    `¡Hola ${r.name}! 🎄 Tu participación en la Gran Rifa Navideña de Constructora Painting 2 S.A.S. quedó *confirmada*.`,
-    `Código de reserva: ${r.code}`,
+export function buildConfirmationMessage(r: { name: string; numbers: number[]; lotteryNote?: string }): string {
+  return [
+    `¡Hola ${r.name}! Tu participación en la Gran Rifa Navideña de Constructora Painting 2 S.A.S. quedó *confirmada*.`,
     "",
     r.numbers.length === 1 ? "Tu boleta:" : "Tus boletas:",
-    ...r.numbers.map((n) => `• Número ${pad(n)}: ${ticketUrl(r.origin, r.code, n)}`),
+    ...r.numbers.map((n) => `• Número ${pad(n)}`),
     "",
     r.lotteryNote ? `${r.lotteryNote}.` : "",
-    "¡Mucha suerte! 🍀",
-  ];
-  return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+    "¡Mucha suerte!",
+  ].join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
-export const ticketUrl = (origin: string, code: string, n: number) =>
-  `${origin.replace(/\/$/, "")}/boleta/${code}/${pad(n)}`;
+/** Ruta de la imagen de la boleta con el número superpuesto. */
+export const ticketImagePath = (code: string, n: number) => `/boleta/${code}/${pad(n)}/imagen`;
 
 /** Devuelve null si el teléfono del comprador no es válido. */
 export function buildWhatsappUrl(phone: string | null, message: string): string | null {

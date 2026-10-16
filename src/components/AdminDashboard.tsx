@@ -7,17 +7,31 @@ type NumRow = { number: number; status: "available" | "reserved" | "sold"; code:
 type Res = {
   id: string; code: string; status: string; payment_status: string; quantity: number; total: number;
   created_at: string; expires_at: string; confirmed_at: string | null; name: string; phone: string; numbers: number[];
-  payment_reference: string | null; cancel_reason: string | null; whatsappUrl: string | null;
+  payment_reference: string | null; cancel_reason: string | null; tickets: Ticket[];
 };
 type AuditRow = { id: number; actor: string; action: string; code: string | null; details: Record<string, unknown>; created_at: string };
-type Dialog = { kind: "confirm" | "cancel"; r: Res } | null;
+type Ticket = { number: number; message: string; url: string | null; imagePath: string };
+type Dialog = { kind: "confirm" | "cancel" | "delete"; r: Res } | { kind: "purge" } | null;
+
+async function ticketBlob(path: string): Promise<Blob> {
+  const res = await fetch(path);
+  if (!res.ok) throw new Error("No se pudo cargar la boleta.");
+  return res.blob();
+}
+async function toPng(jpeg: Blob): Promise<Blob> {
+  const bmp = await createImageBitmap(jpeg);
+  const c = document.createElement("canvas");
+  c.width = bmp.width; c.height = bmp.height;
+  c.getContext("2d")!.drawImage(bmp, 0, 0);
+  return new Promise((ok, ko) => c.toBlob((b) => (b ? ok(b) : ko(new Error("png"))), "image/png"));
+}
 
 const statusLabel: Record<string, string> = { active: "Reservada", confirmed: "Pagada", cancelled: "Cancelada", expired: "Vencida" };
 const statusStyle: Record<string, string> = { active: "bg-amber-100 text-amber-900", confirmed: "bg-emerald-100 text-emerald-900", cancelled: "bg-red-100 text-red-900", expired: "bg-stone-200 text-stone-700" };
 const numColor = { available: "ball-available", reserved: "ball-reserved", sold: "ball-selected" };
 const actionLabel: Record<string, string> = {
   "reservation.created": "Reserva creada", "payment.confirmed": "Pago confirmado", "reservation.cancelled": "Reserva cancelada",
-  "reservation.expired": "Reserva vencida", "admin.login": "Inicio de sesión", "admin.login_failed": "Intento de acceso fallido",
+  "reservation.expired": "Reserva vencida", "reservations.deleted": "Reservas eliminadas", "admin.login": "Inicio de sesión", "admin.login_failed": "Intento de acceso fallido",
 };
 
 export function AdminDashboard({ username, currency }: { username: string; currency: string }) {
@@ -31,6 +45,11 @@ export function AdminDashboard({ username, currency }: { username: string; curre
   const [dialog, setDialog] = useState<Dialog>(null);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [canShare, setCanShare] = useState(false);
+
+  useEffect(() => {
+    try { setCanShare(!!navigator.canShare?.({ files: [new File(["x"], "a.jpg", { type: "image/jpeg" })] })); } catch { setCanShare(false); }
+  }, []);
 
   const api = useCallback(async (url: string, init?: RequestInit) => {
     const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json" }, cache: "no-store" });
@@ -54,11 +73,44 @@ export function AdminDashboard({ username, currency }: { username: string; curre
   useEffect(() => { const t = setTimeout(load, 250); return () => clearTimeout(t); }, [load]);
   useEffect(() => { const t = setInterval(load, 15000); return () => clearInterval(t); }, [load]);
 
-  async function act(url: string, body: object, ok: string) {
+  async function act(url: string, body: object, ok: string | ((d: { deleted?: number }) => string), method = "POST") {
     setMsg(null); setBusy(true);
-    try { await api(url, { method: "POST", body: JSON.stringify(body) }); setMsg({ text: ok, ok: true }); setDialog(null); setText(""); await load(); }
+    try {
+      const d = await api(url, { method, ...(method === "POST" ? { body: JSON.stringify(body) } : {}) });
+      setMsg({ text: typeof ok === "function" ? ok(d) : ok, ok: true }); setDialog(null); setText(""); await load();
+    }
     catch (e) { setMsg({ text: (e as Error).message, ok: false }); }
     finally { setBusy(false); }
+  }
+
+  /** Abre el chat con el comprador, con el mensaje escrito, y deja la boleta copiada para pegarla (Ctrl+V). */
+  async function writeTo(t: Ticket) {
+    if (!t.url) { setMsg({ text: "El teléfono no es válido para WhatsApp.", ok: false }); return; }
+    let copied = false;
+    try {
+      const png = await toPng(await ticketBlob(t.imagePath));
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": png })]);
+      copied = true;
+    } catch { /* se informa abajo */ }
+    window.open(t.url, "_blank", "noopener");
+    setMsg(copied
+      ? { text: `Chat abierto. La imagen de la boleta ${pad(t.number)} está copiada: pégala en el chat con Ctrl+V (⌘+V en Mac) y envíala junto al mensaje.`, ok: true }
+      : { text: "Chat abierto. No se pudo copiar la imagen automáticamente: usa «Descargar» y adjúntala en el chat.", ok: false });
+  }
+
+  /** En celulares: comparte la imagen y el texto juntos desde el menú «Compartir» (elige WhatsApp y el contacto). */
+  async function shareTicket(t: Ticket) {
+    try {
+      const file = new File([await ticketBlob(t.imagePath)], `boleta-${pad(t.number)}.jpg`, { type: "image/jpeg" });
+      await navigator.share({ files: [file], text: t.message });
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") setMsg({ text: "No se pudo compartir la boleta.", ok: false });
+    }
+  }
+
+  async function copyMessage(t: Ticket) {
+    try { await navigator.clipboard.writeText(t.message); setMsg({ text: "Mensaje copiado.", ok: true }); }
+    catch { setMsg({ text: "No se pudo copiar el mensaje.", ok: false }); }
   }
 
   const money = (n: number) => formatMoney(n, currency);
@@ -92,7 +144,10 @@ export function AdminDashboard({ username, currency }: { username: string; curre
           {([["res", "🎟️ Reservas"], ["nums", "🔢 Números"], ["audit", "📜 Historial"]] as const).map(([k, l]) => (
             <button key={k} onClick={() => setTab(k)} aria-pressed={tab === k} className={`rounded-full px-4 py-2 font-bold transition ${tab === k ? "bg-gold text-pine-dark shadow" : "bg-white/15 text-cream hover:bg-white/25"}`}>{l}</button>
           ))}
-          <button className="ml-auto rounded-full bg-white/15 px-4 py-2 font-bold text-cream hover:bg-white/25" onClick={() => act("/api/admin/expire", {}, "Reservas vencidas liberadas.")}>♻️ Liberar vencidas</button>
+          <div className="ml-auto flex flex-wrap gap-2">
+            <button className="rounded-full bg-white/15 px-4 py-2 font-bold text-cream hover:bg-white/25" onClick={() => act("/api/admin/expire", {}, "Reservas vencidas liberadas.")}>♻️ Liberar vencidas</button>
+            <button className="rounded-full bg-white/15 px-4 py-2 font-bold text-cream hover:bg-white/25" onClick={() => setDialog({ kind: "purge" })}>🗑️ Eliminar canceladas</button>
+          </div>
         </nav>
 
         {tab === "res" && (
@@ -116,16 +171,27 @@ export function AdminDashboard({ username, currency }: { username: string; curre
 
                 <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
                   {r.status === "active" && <button className="btn-primary !py-2" onClick={() => { setText(""); setDialog({ kind: "confirm", r }); }}>✅ Confirmar</button>}
-                  {r.status === "confirmed" && (r.whatsappUrl
-                    ? <a href={r.whatsappUrl} target="_blank" rel="noopener noreferrer" className="btn-whatsapp">💬 Escribir a este número</a>
-                    : <span className="rounded bg-amber-50 px-2 py-1 text-xs text-amber-900">El teléfono no es válido para WhatsApp.</span>)}
-                  {r.status === "confirmed" && r.numbers.map((n) => (
-                    <a key={n} href={`/boleta/${r.code}/${pad(n)}`} target="_blank" rel="noopener noreferrer" className="rounded-full border-2 border-pine px-3 py-1.5 text-xs font-bold text-pine hover:bg-pine hover:text-white">🎟️ Ver boleta {pad(n)}</a>
-                  ))}
                   {(r.status === "active" || r.status === "confirmed") && (
                     <button className="rounded-full border-2 border-berry px-4 py-2 font-bold text-berry hover:bg-berry hover:text-white" onClick={() => { setText(""); setDialog({ kind: "cancel", r }); }}>Cancelar y liberar</button>
                   )}
+                  {(r.status === "cancelled" || r.status === "expired") && (
+                    <button className="rounded-full border-2 border-stone-500 px-4 py-2 font-bold text-stone-700 hover:bg-stone-700 hover:text-white" onClick={() => setDialog({ kind: "delete", r })}>🗑️ Eliminar</button>
+                  )}
                 </div>
+                {r.status === "confirmed" && (
+                  <div className="mt-3 space-y-2 border-t border-gold/40 pt-3">
+                    {r.tickets.map((t) => (
+                      <div key={t.number} className="flex flex-wrap items-center gap-2 text-sm">
+                        <span className="rounded-full bg-pine px-3 py-1 text-xs font-bold text-white">Boleta {pad(t.number)}</span>
+                        <button className="btn-whatsapp !py-2" onClick={() => writeTo(t)} disabled={!t.url}>💬 Escribir a este número</button>
+                        {canShare && <button className="rounded-full border-2 border-[#178a4a] px-3 py-1.5 text-xs font-bold text-[#178a4a]" onClick={() => shareTicket(t)}>📤 Compartir imagen + texto</button>}
+                        <button className="rounded-full border-2 border-pine px-3 py-1.5 text-xs font-bold text-pine" onClick={() => copyMessage(t)}>📋 Copiar mensaje</button>
+                        <a href={t.imagePath} download={`boleta-${pad(t.number)}.jpg`} className="rounded-full border-2 border-pine px-3 py-1.5 text-xs font-bold text-pine">⬇ Descargar</a>
+                        <a href={t.imagePath.replace(/\/imagen$/, "")} target="_blank" rel="noopener noreferrer" className="rounded-full border-2 border-pine px-3 py-1.5 text-xs font-bold text-pine">🎟️ Ver</a>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </article>
             ))}
           </section>
@@ -152,26 +218,42 @@ export function AdminDashboard({ username, currency }: { username: string; curre
       {dialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4" role="dialog" aria-modal="true">
           <div className="panel fade-up w-full max-w-md space-y-3 p-5">
-            {dialog.kind === "confirm" ? (
+            {dialog.kind === "confirm" && (
               <>
                 <h2 className="font-display text-2xl font-black text-pine">Confirmar pago</h2>
                 <p className="text-sm">Reserva <b>{dialog.r.code}</b> de <b>{dialog.r.name}</b>: {money(dialog.r.total)}. Los números <b>{dialog.r.numbers.map(pad).join(", ")}</b> quedarán como vendidos y podrás enviarle su boleta por WhatsApp.</p>
                 <label className="block text-sm font-bold">Referencia del pago (opcional)<input value={text} onChange={(e) => setText(e.target.value)} maxLength={120} className="input mt-1" /></label>
               </>
-            ) : (
+            )}
+            {dialog.kind === "cancel" && (
               <>
                 <h2 className="font-display text-2xl font-black text-berry">Cancelar reserva</h2>
                 <p className="text-sm">Se liberarán los números <b>{dialog.r.numbers.map(pad).join(", ")}</b> de <b>{dialog.r.name}</b>.{dialog.r.status === "confirmed" && " Como la venta ya estaba pagada, el motivo es obligatorio y se marcará como reembolsada."}</p>
                 <label className="block text-sm font-bold">Motivo{dialog.r.status === "confirmed" ? " (obligatorio)" : " (opcional)"}<input value={text} onChange={(e) => setText(e.target.value)} maxLength={300} className="input mt-1" /></label>
               </>
             )}
+            {dialog.kind === "delete" && (
+              <>
+                <h2 className="font-display text-2xl font-black text-berry">Eliminar reserva</h2>
+                <p className="text-sm">Se eliminará definitivamente la reserva <b>{dialog.r.code}</b> de <b>{dialog.r.name}</b> (ya cancelada) y dejará de verse en la página. Esta acción no se puede deshacer; el historial conserva el registro.</p>
+              </>
+            )}
+            {dialog.kind === "purge" && (
+              <>
+                <h2 className="font-display text-2xl font-black text-berry">Eliminar canceladas</h2>
+                <p className="text-sm">Se eliminarán definitivamente <b>todas las reservas canceladas y vencidas</b>, junto con los datos de los participantes que no tengan otras reservas. Las reservas activas y las pagadas no se tocan. Esta acción no se puede deshacer.</p>
+              </>
+            )}
             <div className="flex gap-2">
               <button className="btn-secondary" onClick={() => setDialog(null)} disabled={busy}>Volver</button>
               <button className="btn-primary flex-1" disabled={busy || (dialog.kind === "cancel" && dialog.r.status === "confirmed" && !text.trim())}
-                onClick={() => dialog.kind === "confirm"
-                  ? act(`/api/admin/reservations/${dialog.r.id}/confirm`, { reference: text }, `Pago confirmado: ${dialog.r.code}. Ya puedes escribirle por WhatsApp.`)
-                  : act(`/api/admin/reservations/${dialog.r.id}/cancel`, { reason: text }, `Reserva cancelada: ${dialog.r.code}`)}>
-                {busy ? "Procesando…" : dialog.kind === "confirm" ? "Confirmar pago" : "Cancelar reserva"}
+                onClick={() => {
+                  if (dialog.kind === "confirm") act(`/api/admin/reservations/${dialog.r.id}/confirm`, { reference: text }, `Pago confirmado: ${dialog.r.code}. Ya puedes escribirle por WhatsApp.`);
+                  else if (dialog.kind === "cancel") act(`/api/admin/reservations/${dialog.r.id}/cancel`, { reason: text }, `Reserva cancelada: ${dialog.r.code}`);
+                  else if (dialog.kind === "delete") act(`/api/admin/reservations/${dialog.r.id}`, {}, `Reserva eliminada: ${dialog.r.code}`, "DELETE");
+                  else act("/api/admin/purge", {}, (d) => `Se eliminaron ${d.deleted ?? 0} reservas canceladas o vencidas.`);
+                }}>
+                {busy ? "Procesando…" : { confirm: "Confirmar pago", cancel: "Cancelar reserva", delete: "Eliminar", purge: "Eliminar todas" }[dialog.kind]}
               </button>
             </div>
           </div>

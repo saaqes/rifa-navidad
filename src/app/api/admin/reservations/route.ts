@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/auth";
 import { searchReservations } from "@/lib/raffle";
 import { handle } from "@/lib/http";
 import { getRaffleConfig } from "@/lib/config";
-import { buildConfirmationMessage, buildWhatsappUrl, toWhatsappPhone } from "@/lib/whatsapp";
+import { buildConfirmationMessage, buildWhatsappUrl, ticketImagePath, toWhatsappPhone } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
 
@@ -18,20 +18,18 @@ export async function GET(req: Request) {
       status && valid.includes(status) ? status : undefined,
     );
     const cfg = getRaffleConfig();
-    const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? new URL(req.url).host;
-    const proto = req.headers.get("x-forwarded-proto") ?? new URL(req.url).protocol.replace(":", "");
-    const origin = `${proto}://${host}`;
-    const reservations = rows.map((r) => ({
-      ...r,
-      // Solo las reservas con pago confirmado generan el enlace para enviar la boleta.
-      whatsappUrl:
+    const reservations = rows.map((r) => {
+      // Solo las reservas con pago confirmado generan mensajes/boletas para enviar.
+      const phone = toWhatsappPhone(r.phone, cfg.countryCode);
+      const tickets =
         r.status === "confirmed"
-          ? buildWhatsappUrl(
-              toWhatsappPhone(r.phone, cfg.countryCode),
-              buildConfirmationMessage({ name: r.name, code: r.code, numbers: r.numbers, origin, lotteryNote: cfg.lotteryNote }),
-            )
-          : null,
-    }));
+          ? (r.numbers as number[]).map((n) => {
+              const message = buildConfirmationMessage({ name: r.name, numbers: [n], lotteryNote: cfg.lotteryNote });
+              return { number: n, message, url: buildWhatsappUrl(phone, message), imagePath: ticketImagePath(r.code, n) };
+            })
+          : [];
+      return { ...r, tickets };
+    });
     return NextResponse.json({ reservations }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     return handle(e);

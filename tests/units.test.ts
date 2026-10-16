@@ -35,12 +35,16 @@ describe("validación", () => {
 });
 
 describe("WhatsApp (administrador -> comprador)", () => {
-  const msg = buildConfirmationMessage({ name: "Ana", numbers: [3, 12], code: "RN-ABC234", origin: "https://rifa.example/", lotteryNote: "Juega con la Lotería" });
-  it("incluye un enlace de boleta por número y los datos reales", () => {
-    expect(msg).toContain("Ana");
-    expect(msg).toContain("• Número 03: https://rifa.example/boleta/RN-ABC234/03");
-    expect(msg).toContain("• Número 12: https://rifa.example/boleta/RN-ABC234/12");
-    expect(msg).toContain("RN-ABC234");
+  const msg = buildConfirmationMessage({ name: "Sebastian Ramirez", numbers: [4], lotteryNote: "Juega con las ÚLTIMAS DOS CIFRAS de la Lotería de la Cruz Roja" });
+  it("usa el texto acordado, sin código de reserva", () => {
+    expect(msg).toBe(
+      "¡Hola Sebastian Ramirez! Tu participación en la Gran Rifa Navideña de Constructora Painting 2 S.A.S. quedó *confirmada*.\n\nTu boleta:\n• Número 04\n\nJuega con las ÚLTIMAS DOS CIFRAS de la Lotería de la Cruz Roja.\n¡Mucha suerte!",
+    );
+    expect(msg).not.toMatch(/RN-|código/i);
+  });
+  it("con varios números usa plural", () => {
+    const m = buildConfirmationMessage({ name: "Ana", numbers: [3, 12] });
+    expect(m).toContain("Tus boletas:\n• Número 03\n• Número 12");
   });
   it("agrega el indicativo a teléfonos de 10 dígitos y rechaza inválidos", () => {
     expect(toWhatsappPhone("3001234567", "57")).toBe("573001234567");

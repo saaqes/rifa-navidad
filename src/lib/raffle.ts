@@ -249,7 +249,7 @@ export async function searchReservations(q: string, status?: string) {
 
 export async function listAudit(limit = 100) {
   const { rows } = await query(
-    `SELECT a.id, a.actor, a.action, a.details, a.created_at, r.code
+    `SELECT a.id, a.actor, a.action, a.details, a.created_at, COALESCE(r.code, a.details->>'code') AS code
        FROM audit_log a LEFT JOIN reservations r ON r.id = a.reservation_id
       ORDER BY a.id DESC LIMIT $1`,
     [limit],
@@ -266,4 +266,38 @@ export async function findConfirmedTicket(code: string, number: number): Promise
     [code, number],
   );
   return rows.length > 0;
+}
+
+/**
+ * Elimina definitivamente reservas canceladas o vencidas (sus números ya están libres).
+ * Las confirmadas/activas nunca se eliminan: primero hay que cancelarlas.
+ * El historial se conserva: se guarda el código en cada registro antes de desvincularlo.
+ */
+export async function deleteReservations(actor: string, ids?: string[]) {
+  return withTx(async (c) => {
+    const { rows } = await c.query<{ id: string; code: string; participant_id: string }>(
+      `SELECT id, code, participant_id FROM reservations
+        WHERE status IN ('cancelled','expired') AND ($1::uuid[] IS NULL OR id = ANY($1::uuid[]))
+        ORDER BY created_at FOR UPDATE`,
+      [ids ?? null],
+    );
+    if (ids && rows.length !== ids.length) {
+      throw new AppError(409, "Solo se pueden eliminar reservas canceladas o vencidas.");
+    }
+    if (rows.length === 0) return { deleted: 0 };
+    const rids = rows.map((r) => r.id);
+    for (const r of rows) {
+      await c.query("UPDATE audit_log SET details = details || jsonb_build_object('code', $2::text) WHERE reservation_id = $1", [r.id, r.code]);
+    }
+    await c.query("UPDATE audit_log SET reservation_id = NULL WHERE reservation_id = ANY($1::uuid[])", [rids]);
+    await c.query("DELETE FROM reservation_numbers WHERE reservation_id = ANY($1::uuid[])", [rids]);
+    await c.query("DELETE FROM reservations WHERE id = ANY($1::uuid[])", [rids]);
+    await c.query(
+      `DELETE FROM participants p WHERE p.id = ANY($1::uuid[])
+          AND NOT EXISTS (SELECT 1 FROM reservations r WHERE r.participant_id = p.id)`,
+      [rows.map((r) => r.participant_id)],
+    );
+    await audit(c, actor, "reservations.deleted", null, { count: rows.length, codes: rows.map((r) => r.code) });
+    return { deleted: rows.length };
+  });
 }
