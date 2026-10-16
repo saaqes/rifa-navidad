@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatMoney, pad } from "@/lib/format";
 import type { RaffleConfig } from "@/lib/config";
-import { Bauble, Bow, Confetti, CornerDecor, DecorRow, Holly, Lights, Ribbon, Sleigh, Snowfall, Sponsor } from "./Decor";
+import { Bauble, Confetti, CornerDecor, DecorRow, Lights, Sleigh, Snowfall, Sponsor } from "./Decor";
 
 type Status = "available" | "reserved" | "sold";
 type Result = {
@@ -127,63 +127,33 @@ export function RaffleApp({ config }: { config: RaffleConfig }) {
       <Lights />
       <CornerDecor bottomOffset="var(--bar-h)" />
 
-      {/* ---------- Encabezado / héroe (como la boleta) ---------- */}
+      {/* ---------- Encabezado / héroe: piezas recortadas de la boleta oficial ---------- */}
       <header className="relative px-3 pb-10 pt-14 text-center text-cream sm:px-4">
         <Sleigh />
-        <Bauble className="left-[26%] top-9 hidden md:block" color="#d4a437" size={34} delay={0.8} />
-        <Bauble className="right-[26%] top-9 hidden md:block" color="#b3202a" size={34} delay={1.2} />
+        <Bauble className="left-[22%] top-8 hidden md:flex" src="bauble-red2" size={44} />
+        <Bauble className="left-[11%] top-6 hidden lg:flex" src="bauble-gold2" size={36} delay={0.9} />
+        <Bauble className="right-[22%] top-8 hidden md:flex" src="bauble-gold2" size={44} delay={0.5} />
+        <Bauble className="right-[11%] top-6 hidden lg:flex" src="bauble-red" size={36} delay={1.3} />
+
+        <h1 className="sr-only">Gran Rifa Navideña de Constructora Painting 2 S.A.S. Valor de la boleta {money(price)}. {money(config.totalPrizes)} en premios.</h1>
 
         <div className="relative z-10 mx-auto max-w-3xl fade-up">
-          {/* Placa «Valor de la boleta» */}
-          <div className="relative mx-auto inline-block rounded-[1.4rem] border-4 border-[#f2c14e] bg-gradient-to-b from-[#d8323d] to-[#9c1a22] px-8 py-2 shadow-xl">
-            <span aria-hidden className="absolute -left-3 top-1/2 -translate-y-1/2 text-xl text-gold">★</span>
-            <span aria-hidden className="absolute -right-3 top-1/2 -translate-y-1/2 text-xl text-gold">★</span>
-            <div className="font-title text-sm uppercase tracking-wide text-white sm:text-lg">Valor de la boleta</div>
-            <div className="font-title text-4xl leading-none text-[#ffd23f] drop-shadow-[0_3px_0_#6f1017] sm:text-6xl">{money(price).replace("$ ", "$")}</div>
-          </div>
-
-          {/* Título + cinta NAVIDEÑA */}
-          <div className="relative mt-2">
-            <h1 className="sr-only">Gran Rifa Navideña</h1>
-            <div aria-hidden className="title-3d mx-auto whitespace-nowrap text-[clamp(2.3rem,12.2vw,7.4rem)]" data-text="GRAN RIFA"><span>GRAN RIFA</span></div>
-            <Ribbon className="-mt-1 w-[96%] max-w-[34rem]">
-              <div aria-hidden className="title-white py-1 text-[clamp(2.2rem,11.5vw,5.2rem)] leading-none">NAVIDEÑA</div>
-            </Ribbon>
-            <div aria-hidden className="floaty -mt-3 text-3xl text-gold drop-shadow">⭐</div>
-          </div>
-
-          {/* Cinta de premios */}
-          <Ribbon className="mt-1 w-[98%] max-w-[36rem]">
-            <div className="px-2 py-1.5">
-              <div className="font-title text-[clamp(2.1rem,10.5vw,4.4rem)] leading-none text-[#ffd23f] drop-shadow-[0_3px_0_#6f1017]">{money(config.totalPrizes).replace("$ ", "$")}</div>
-              <div className="font-title text-lg tracking-wide text-white sm:text-2xl">EN PREMIOS</div>
-            </div>
-          </Ribbon>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/art/plaque.webp" alt={`Valor de la boleta ${money(price)}`} width={491} height={144} fetchPriority="high" className="mx-auto w-[56%] max-w-[26rem] drop-shadow-[0_10px_16px_rgba(0,0,0,.45)]" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/art/hero.webp" alt={`Gran Rifa Navideña, ${money(config.totalPrizes)} en premios`} width={1024} height={668} fetchPriority="high" className="mx-auto -mt-1 w-full drop-shadow-[0_14px_20px_rgba(0,0,0,.45)]" />
         </div>
 
-        {/* Bolas de premio */}
-        <div className="relative z-10 mx-auto mt-10 grid max-w-3xl gap-9 sm:grid-cols-2 sm:gap-6" aria-label="Premios">
+        <div className="relative z-10 mx-auto -mt-3 grid max-w-2xl gap-1 sm:-mt-6 sm:grid-cols-2 sm:gap-4" aria-label="Premios">
           {config.prizes.map((p, i) => (
-            <div key={p.title} className="prize-ball fade-up mx-auto flex aspect-square w-full max-w-[19rem] flex-col items-center justify-center px-4 pb-6 pt-8 text-pine-dark" style={{ animationDelay: `${0.15 * (i + 1)}s` }}>
-              <span aria-hidden className="prize-cap" />
-              <Bow className="absolute -top-9 left-1/2 w-24 -translate-x-1/2" />
-              <div className={`absolute left-1/2 top-[13%] w-[92%] -translate-x-1/2 rounded-md px-2 py-1 font-title text-sm uppercase tracking-wide text-white shadow-md sm:text-base ${i === 0 ? "bg-gradient-to-b from-[#1f7a46] to-[#0f4d2c]" : "bg-gradient-to-b from-[#c4252f] to-[#8c1820]"}`} style={{ clipPath: "polygon(0 0,100% 0,96% 50%,100% 100%,0 100%,4% 50%)" }}>
-                <span className="text-gold">★</span> {p.title} <span className="text-gold">★</span>
-              </div>
-              <div className="mt-8 font-title text-[2.2rem] leading-none text-[#c4161f] drop-shadow-[0_2px_0_#fff3] sm:text-4xl">{money(p.amount).replace("$ ", "$")}</div>
-              <div aria-hidden className="mx-auto my-2 flex items-center justify-center gap-2 text-sm text-pine"><span className="h-px w-10 bg-pine/40" />🎄<span className="h-px w-10 bg-pine/40" /></div>
-              <div className="text-sm font-semibold leading-snug">Juega el {p.playDate}</div>
-              <Holly className="absolute -bottom-3 left-1/2 w-40 -translate-x-1/2" />
-              <span aria-hidden className="absolute left-4 top-1/2 text-xl text-gold/60">❄</span>
-              <span aria-hidden className="absolute right-4 top-1/2 text-xl text-gold/60">❄</span>
-            </div>
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={p.title} src={`/brand/art/ball${i + 1}.webp`} alt={`${p.title}: ${money(p.amount)}. Juega el ${p.playDate}`} width={396} height={445} loading="lazy"
+              className="floaty mx-auto w-full max-w-[19rem] drop-shadow-[0_14px_18px_rgba(0,0,0,.5)] sm:max-w-[20rem]" style={{ animationDuration: `${3.4 + i * 0.6}s` }} />
           ))}
         </div>
 
-        <p className="relative z-10 mx-auto mt-10 flex max-w-xl items-center justify-center gap-3 rounded-2xl border-[3px] border-[#e0b040] bg-cream px-4 py-2.5 text-sm font-bold leading-snug text-pine shadow-xl sm:text-base">
-          <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-berry bg-white text-xl font-black text-berry">✚</span>
-          <span>{config.lotteryNote}</span>
-        </p>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/art/pill.webp" alt={config.lotteryNote} width={728} height={117} loading="lazy" className="relative z-10 mx-auto mt-5 w-full max-w-xl drop-shadow-xl" />
 
         <div className="relative z-10 mx-auto mt-6 grid max-w-md grid-cols-3 gap-2 text-sm text-cream">
           <Stat label="Disponibles" value={loaded ? counts.available : "–"} />

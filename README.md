@@ -55,6 +55,8 @@ Tomados de la boleta aprobada y editables en `src/config/raffle-data.ts`: boleta
 Variables opcionales: `RAFFLE_TICKET_PRICE` (sobrescribe el precio), `RAFFLE_TERMS` (si se define, se exige aceptarlas), `RAFFLE_PAYMENT_INSTRUCTIONS`, `COMPANY_LEGAL_INFO`, `WHATSAPP_COUNTRY_CODE` (por defecto `57`, se antepone a teléfonos de 10 dígitos).
 Obligatorias: `DATABASE_URL`, `DATABASE_SSL`, `ADMIN_PASSWORD_HASH`, `SESSION_SECRET`.
 
+**Arte de la boleta:** las piezas gráficas (placa de precio, título con cintas, bolas de premio, etiqueta de la lotería, bolas y esquinas con ramas y regalos) se recortan de `public/brand/boleta.jpg` con `python3 scripts/extract-art.py` (requiere `opencv-python-headless` y `pillow`) y quedan en `public/brand/art/`. Son imágenes: si cambian el precio, los premios o las fechas, hay que reemplazar `boleta.jpg` por la nueva boleta y volver a ejecutar el script.
+
 Pendiente: el logo de `public/brand/logo.png` se recortó de la boleta (baja resolución); reemplázalo por el archivo original cuando lo tengas.
 
 ## Limitaciones conocidas
