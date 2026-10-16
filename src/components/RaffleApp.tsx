@@ -144,7 +144,7 @@ export function RaffleApp({ config }: { config: RaffleConfig }) {
           <img src="/brand/art/hero.webp" alt={`Gran Rifa Navideña, ${money(config.totalPrizes)} en premios`} width={1024} height={668} fetchPriority="high" className="mx-auto -mt-1 w-full drop-shadow-[0_14px_20px_rgba(0,0,0,.45)]" />
         </div>
 
-        <div className="relative z-10 mx-auto -mt-3 grid max-w-2xl gap-1 sm:-mt-6 sm:grid-cols-2 sm:gap-4" aria-label="Premios">
+        <div className="relative z-10 mx-auto -mt-3 grid max-w-2xl grid-cols-2 gap-1 sm:-mt-6 sm:gap-4" aria-label="Premios">
           {config.prizes.map((p, i) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img key={p.title} src={`/brand/art/ball${i + 1}.webp`} alt={`${p.title}: ${money(p.amount)}. Juega el ${p.playDate}`} width={396} height={445} loading="lazy"
