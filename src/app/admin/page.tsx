@@ -9,5 +9,5 @@ export const metadata = { title: "Administración | Gran Rifa Navideña", robots
 export default async function AdminPage() {
   const admin = await getAdmin();
   if (!admin) redirect("/admin/login");
-  return <AdminDashboard email={admin} currency={getRaffleConfig().currency} />;
+  return <AdminDashboard username={admin} currency={getRaffleConfig().currency} />;
 }

@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { getPool, query } from "@/lib/db";
 import { resetDb, setupEnv } from "./helpers";
 import {
-  adminOverview, cancelReservation, confirmPayment, createReservation, listPublicNumbers, releaseExpired, searchReservations,
+  adminOverview, cancelReservation, findConfirmedTicket, confirmPayment, createReservation, listPublicNumbers, releaseExpired, searchReservations,
 } from "@/lib/raffle";
 
 const person = (i = 1) => ({ name: `Persona Prueba ${"ABCDEFGHIJKLMNOPQRSTUVWXYZ"[i % 26]}`, phone: `30000000${String(i).padStart(2, "0")}` });
@@ -73,11 +73,24 @@ describe("reservas", () => {
     await expect(createReservation({ ...person(), numbers: Array.from({ length: 21 }, (_, i) => i) })).rejects.toMatchObject({ status: 400 });
   });
 
-  it("sin precio configurado no se permite reservar", async () => {
+  it("sin variable de entorno usa el precio oficial de la boleta ($200.000)", async () => {
     const old = process.env.RAFFLE_TICKET_PRICE;
     delete process.env.RAFFLE_TICKET_PRICE;
-    await expect(createReservation({ ...person(), numbers: [1] })).rejects.toMatchObject({ status: 503 });
+    const r = await createReservation({ ...person(), numbers: [1, 2] });
+    expect(r.total).toBe(400000);
     process.env.RAFFLE_TICKET_PRICE = old;
+  });
+});
+
+describe("boletas", () => {
+  it("solo existen para números de reservas con pago confirmado", async () => {
+    const r = await createReservation({ ...person(), numbers: [8, 9] });
+    expect(await findConfirmedTicket(r.code, 8)).toBe(false);
+    await confirmPayment(r.id, "admin@test");
+    expect(await findConfirmedTicket(r.code, 8)).toBe(true);
+    expect(await findConfirmedTicket(r.code, 10)).toBe(false);
+    await cancelReservation(r.id, "admin@test", "prueba");
+    expect(await findConfirmedTicket(r.code, 8)).toBe(false);
   });
 });
 

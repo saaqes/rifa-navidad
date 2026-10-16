@@ -256,3 +256,14 @@ export async function listAudit(limit = 100) {
   );
   return rows;
 }
+
+/** Una boleta solo existe para números de reservas con pago confirmado. */
+export async function findConfirmedTicket(code: string, number: number): Promise<boolean> {
+  const { rows } = await query(
+    `SELECT 1 FROM reservations r
+       JOIN raffle_numbers n ON n.reservation_id = r.id
+      WHERE r.code = $1 AND r.status = 'confirmed' AND n.status = 'sold' AND n.number = $2`,
+    [code, number],
+  );
+  return rows.length > 0;
+}

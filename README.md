@@ -6,21 +6,24 @@ Aplicación web para gestionar la rifa de 100 números (00–99): selección pú
 *Por qué `pg` directo y no el cliente de Supabase:* toda la lógica sensible vive en el servidor con transacciones y bloqueos de fila; las tablas tienen RLS activado **sin políticas**, de modo que las claves públicas de Supabase no pueden leer ni escribir nada. Funciona con cualquier PostgreSQL.
 
 ## Funcionalidades
+- Diseño navideño animado (nieve cayendo, luces, bolas colgantes, trineo de Santa); respeta «reducir movimiento».
 - Cuadrícula 00–99 con estados Disponible / Seleccionado / Reservado / Vendido, actualizada cada 8 s desde el servidor.
-- Resumen de selección (cantidad y total), formulario validado (cliente y servidor), pantalla de revisión y confirmación con código `RN-XXXXXX`.
+- El comprador elige números y deja **nombre completo y teléfono**; recibe un código `RN-XXXXXX`. No hay WhatsApp del lado del comprador.
 - Reserva atómica: bloqueo ordenado de filas + `CHECK` + índice único parcial; dos solicitudes no pueden tomar el mismo número.
-- Reservas temporales con expiración configurable (`RESERVATION_TTL_MINUTES`); la liberación la hace el servidor revalidando el estado en transacción.
-- Un número solo pasa a **vendido** cuando el administrador confirma el pago.
-- Mensaje de WhatsApp dinámico (`wa.me`) con los datos reales de la reserva.
-- Panel `/admin`: números, reservas (búsqueda por código/nombre/teléfono), confirmar pago, cancelar, liberar vencidas, totales, ventas confirmadas e historial de auditoría.
-- Admin con sesión firmada (HMAC, cookie HttpOnly/SameSite=Strict), contraseña con scrypt, límite de intentos, verificación de origen y autorización en **cada** ruta `/api/admin/*`.
+- Reservas temporales con expiración configurable (`RESERVATION_TTL_MINUTES`).
+- **Flujo del administrador:** la reserva aparece en `/admin` → **Confirmar** (el pago pasa a pagado y los números a vendidos) → aparece **«Escribir a este número»**, un enlace `wa.me` al teléfono del comprador con un mensaje que incluye el enlace de su boleta.
+- **Boleta con número:** `/boleta/<código>/<número>` muestra la boleta oficial (`public/brand/boleta.jpg`) con el número en la esquina superior derecha. Solo existe para números de reservas pagadas. La imagen se genera en `/boleta/<código>/<número>/imagen` (JPEG ligero) y el enlace muestra vista previa en WhatsApp.
+- Panel `/admin` con usuario y contraseña: búsqueda, confirmar pago, cancelar (motivo obligatorio si ya estaba pagada), liberar vencidas, totales, ventas confirmadas e historial.
+- Seguridad: sesión firmada (HMAC, cookie HttpOnly/SameSite=Strict), contraseña con scrypt, límite de intentos, verificación de origen y autorización en **cada** ruta `/api/admin/*`.
+
+**Usuario del panel:** `admin` (o el valor de `ADMIN_USER`). La contraseña es la que generes con `npm run admin:hash` y guardes en `ADMIN_PASSWORD_HASH`.
 
 ## Puesta en marcha local
 ```bash
 npm install
 cp .env.example .env.local        # completar valores
 npm run admin:hash -- "contraseña-de-12+-caracteres"   # pegar resultado en ADMIN_PASSWORD_HASH
-openssl rand -hex 32               # pegar en SESSION_SECRET
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"   # pegar en SESSION_SECRET
 npm run db:migrate                 # aplica db/schema.sql (idempotente) a DATABASE_URL
 npm run dev                        # http://localhost:3000
 ```
@@ -45,14 +48,16 @@ Cubren: 100 números en formato de dos dígitos, reservas simultáneas (25 solic
 3. `npm run build && npm start` (o despliegue automático de Vercel).
 > El limitador de intentos es en memoria por instancia; para tráfico alto, añade un límite en el borde (WAF/Vercel Firewall).
 
-## Datos pendientes antes de publicar
-Todo lo siguiente se configura por variables de entorno; si falta, la página muestra «PENDIENTE DE DEFINIR» y **no inventa nada**:
-- `RAFFLE_TICKET_PRICE` (sin precio, las reservas están deshabilitadas) · `RAFFLE_PRIZES` · `RAFFLE_DRAW_DATE` · `RAFFLE_TERMS` · `RAFFLE_PAYMENT_INSTRUCTIONS` · `COMPANY_LEGAL_INFO` · `WHATSAPP_NUMBER`.
-- **Logo oficial:** copiar a `public/brand/logo.png` (mientras tanto se muestra el nombre en texto).
-- **Boleta de referencia:** no estaba disponible en el entorno; el diseño es navideño genérico y debe ajustarse a la imagen oficial cuando se adjunte.
-- Credenciales de admin (`ADMIN_EMAIL`, `ADMIN_PASSWORD_HASH`, `SESSION_SECRET`).
+## Datos de la rifa
+Tomados de la boleta aprobada y editables en `src/config/raffle-data.ts`: boleta $200.000, premios 1.º y 2.º de $5.000.000 (sorteos 22 y 29 de diciembre de 2026) con las últimas dos cifras de la Lotería de la Cruz Roja.
+
+Variables opcionales: `RAFFLE_TICKET_PRICE` (sobrescribe el precio), `RAFFLE_TERMS` (si se define, se exige aceptarlas), `RAFFLE_PAYMENT_INSTRUCTIONS`, `COMPANY_LEGAL_INFO`, `WHATSAPP_COUNTRY_CODE` (por defecto `57`, se antepone a teléfonos de 10 dígitos).
+Obligatorias: `DATABASE_URL`, `DATABASE_SSL`, `ADMIN_PASSWORD_HASH`, `SESSION_SECRET`.
+
+Pendiente: el logo de `public/brand/logo.png` se recortó de la boleta (baja resolución); reemplázalo por el archivo original cuando lo tengas.
 
 ## Limitaciones conocidas
-- No se ha probado contra Supabase real (no hay credenciales); las pruebas usan PostgreSQL 16 local.
+- WhatsApp (`wa.me`) no permite adjuntar archivos desde un enlace: el mensaje lleva el **enlace** de la boleta, que WhatsApp muestra como imagen de vista previa y se puede descargar.
 - La confirmación de pago es manual (administrador); no hay pasarela de pago integrada.
-- Una reserva vencida no puede confirmarse; si llega un pago tardío, el administrador debe crear/gestionar una nueva reserva.
+- Una reserva vencida no puede confirmarse; si llega un pago tardío, el administrador debe gestionar una nueva reserva.
+- Las pruebas usan PostgreSQL local; no se han ejecutado contra Neon/Supabase reales.

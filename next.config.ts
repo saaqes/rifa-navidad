@@ -2,7 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  serverExternalPackages: ["pg"],
+  serverExternalPackages: ["pg", "sharp"],
+  // La imagen base de la boleta se lee desde disco al generar cada boleta.
+  outputFileTracingIncludes: { "/boleta/[code]/[number]/imagen": ["./public/brand/boleta.jpg"] },
   async headers() {
     return [
       {

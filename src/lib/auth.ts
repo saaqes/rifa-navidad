@@ -28,13 +28,14 @@ export function verifyPassword(password: string, stored: string): boolean {
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
-export function checkCredentials(email: string, password: string): boolean {
-  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+export const adminUsername = () => (process.env.ADMIN_USER?.trim() || "admin").toLowerCase();
+
+export function checkCredentials(username: string, password: string): boolean {
   const hash = process.env.ADMIN_PASSWORD_HASH;
-  if (!adminEmail || !hash) throw new AppError(503, "El acceso administrativo no está configurado.");
-  const emailOk = safeEqual(email.trim().toLowerCase(), adminEmail);
+  if (!hash) throw new AppError(503, "El acceso administrativo no está configurado.");
+  const userOk = safeEqual(username.trim().toLowerCase(), adminUsername());
   const passOk = verifyPassword(password, hash); // siempre se evalúa, para no filtrar por tiempo
-  return emailOk && passOk;
+  return userOk && passOk;
 }
 
 export function createSessionToken(email: string, now = Date.now()): string {
