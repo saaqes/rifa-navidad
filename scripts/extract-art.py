@@ -13,7 +13,7 @@ OUT = "public/brand/art"
 
 # nombre: (x0, y0, x1, y1, método, parámetros)
 PIECES = {
-    "plaque":   (250, 50, 770, 208, "grabcut", {"inset": 4}),
+    "plaque":   (215, 40, 810, 206, "plaque", {}),
     # título + cinta NAVIDEÑA + cinta de premios (en la boleta se superponen, se recortan juntos)
     "hero":     (0, 205, 1024, 884, "grabcut", {"inset": 2}),
     "ball1":    (100, 785, 505, 1245, "grabcut", {"inset": 4}),
@@ -66,6 +66,36 @@ def make_mask(crop, method, p):
             for cy in (r, h * 4 - r):
                 cv2.circle(k, (cx, cy), r, 255, -1)
         return cv2.resize(k, (w, h), interpolation=cv2.INTER_AREA)
+    if method == "plaque":
+        # La placa es roja con borde dorado y texto blanco/dorado: se segmenta por color
+        # (GrabCut confundía el borde dorado con el fondo) y se quita lo que no es placa.
+        hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+        H, S, V = (hsv[..., i].astype(int) for i in range(3))
+        fg = (((H < 8) | (H > 168)) & (S > 110) & (V > 60)) | ((H >= 14) & (H <= 34) & (S > 90) & (V > 150)) | ((S < 60) & (V > 200))
+        fg = cv2.morphologyEx(fg.astype(np.uint8) * 255, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9)))
+        n, lab, _, _ = cv2.connectedComponentsWithStats(fg, 8)
+        m = ((lab == lab[h // 2, w // 2]) * 255).astype(np.uint8)
+        m = fill_holes(m)
+        core = cv2.morphologyEx(m, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (47, 47)))  # cuerpo de la placa
+        allowed = np.zeros_like(m, dtype=bool)
+        yy, xx = np.mgrid[0:h, 0:w]
+        pad = 9  # margen para conservar el borde dorado y sus volutas
+        cols = np.where(core.any(axis=0))[0]
+        top = np.full(w, h, int); bot = np.full(w, -1, int)
+        for x in cols:
+            ys = np.where(core[:, x] > 0)[0]
+            top[x], bot[x] = ys.min(), ys.max()
+        rows = np.where(core.any(axis=1))[0]
+        left = np.full(h, w, int); right = np.full(h, -1, int)
+        for y in rows:
+            xs = np.where(core[y] > 0)[0]
+            left[y], right[y] = xs.min(), xs.max()
+        allowed = (yy >= top[xx] - 4) & (yy <= bot[xx] + pad) & (xx >= left[yy] - pad) & (xx <= right[yy] + pad)
+        m = cv2.bitwise_and(m, allowed.astype(np.uint8) * 255)
+        m = largest_component(m)
+        m[:16][(V[:16] < 205)] = 0  # restos tenues de luces del fondo sobre el borde superior
+        m = largest_component(m)
+        return cv2.morphologyEx(m, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5)))
     if method == "circle":
         m = np.zeros((h * 4, w * 4), np.uint8)
         cx, cy = p["c"]

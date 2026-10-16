@@ -139,7 +139,7 @@ export function RaffleApp({ config }: { config: RaffleConfig }) {
 
         <div className="relative z-10 mx-auto max-w-3xl fade-up">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/art/plaque.webp" alt={`Valor de la boleta ${money(price)}`} width={491} height={144} fetchPriority="high" className="mx-auto w-[56%] max-w-[26rem] drop-shadow-[0_10px_16px_rgba(0,0,0,.45)]" />
+          <img src="/brand/art/plaque.webp" alt={`Valor de la boleta ${money(price)}`} width={505} height={162} fetchPriority="high" className="mx-auto w-[56%] max-w-[26rem] drop-shadow-[0_10px_16px_rgba(0,0,0,.45)]" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/art/hero.webp" alt={`Gran Rifa Navideña, ${money(config.totalPrizes)} en premios`} width={1024} height={668} fetchPriority="high" className="mx-auto -mt-1 w-full drop-shadow-[0_14px_20px_rgba(0,0,0,.45)]" />
         </div>
